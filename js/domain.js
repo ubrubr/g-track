@@ -106,8 +106,13 @@ export const contentKey = record => JSON.stringify({ date: record.date, deleted:
 export function progressSeries(workouts, id, variation = '*', period = 'all', today = localDate()) {
   const cutoff = new Date(`${today}T12:00:00Z`);
   if (period === '4w') cutoff.setUTCDate(cutoff.getUTCDate() - 28);
-  if (period === '3m') cutoff.setUTCMonth(cutoff.getUTCMonth() - 3);
-  if (period === '6m') cutoff.setUTCMonth(cutoff.getUTCMonth() - 6);
+  if (period === '3m' || period === '6m') {
+    const day = cutoff.getUTCDate();
+    cutoff.setUTCDate(1);
+    cutoff.setUTCMonth(cutoff.getUTCMonth() - (period === '3m' ? 3 : 6));
+    const lastDay = new Date(Date.UTC(cutoff.getUTCFullYear(), cutoff.getUTCMonth() + 1, 0)).getUTCDate();
+    cutoff.setUTCDate(Math.min(day, lastDay));
+  }
   const min = period === 'all' ? '1900-01-01' : cutoff.toISOString().slice(0, 10);
   return workouts.filter(w => !w.deleted && w.date >= min && w.date <= today).flatMap(w => {
     const exercises = w.exercises.filter(e => e.exerciseId === id && (variation === '*' || e.variation === variation));

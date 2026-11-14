@@ -56,6 +56,12 @@ test('range, name, date and duplicate exercise validation rejects malformed inpu
   for (const change of [{reps:0,weight:0},{reps:10,weight:300.5},{reps:10,weight:1.25},{reps:101,weight:0}]) { const bad=clone(w); bad.exercises[0].sets=[change]; assert.throws(()=>validateWorkout(bad)); }
   const bad=clone(w); bad.exercises.push(clone(bad.exercises[0])); assert.throws(()=>validateWorkout(bad),/twice/);
 });
+test('month filters clamp month-end boundaries without skipping into the next month', () => {
+  const w=record(); w.date='2026-02-28';
+  assert.equal(progressSeries([w],'squats','*','3m','2026-05-31').length,1);
+  w.date='2026-02-27';
+  assert.equal(progressSeries([w],'squats','*','3m','2026-05-31').length,0);
+});
 test('calendar dates and display dates survive timezone and daylight saving changes', () => {
   const moduleURL=new URL('../js/domain.js',import.meta.url).href;
   for (const TZ of ['Pacific/Honolulu','Pacific/Kiritimati','America/New_York','Europe/Budapest']) {
