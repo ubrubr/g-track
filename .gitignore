@@ -1,0 +1,12 @@
+dist/
+node_modules/
+.env
+.env.*
+!.env.example
+backups/
+*.backup.json
+form-backup-*.json
+form-sets-*.csv
+test-results/
+*.log
+.DS_Store
