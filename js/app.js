@@ -86,9 +86,10 @@ function renderWorkout() {
     <div class="wheel-labels" aria-hidden="true"><span>SETS</span><span>REPS</span><span>KG</span></div>
     <div class="wheels"><number-wheel kind="sets" label="Number of sets" value="${item.count}"></number-wheel><number-wheel kind="reps" label="Repetitions for set ${item.selectedSet + 1}" value="${set.reps}"></number-wheel><number-wheel kind="weight" label="Weight in kilograms for set ${item.selectedSet + 1}" value="${set.weight}"></number-wheel></div>
     <p class="picker-footnote">${icon('info')}<span>KG is the total external load. Combine both dumbbells. Use 0 for bodyweight.${item.repMode === 'per-leg' ? '<br>Reps are per leg. Each set includes both legs.' : ''}</span></p></div>
-    <div class="apply-row"><button data-action="apply-all">${icon('copy')} Apply selected set to all</button></div><div class="sets-heading"><span class="eyebrow">SET SUMMARY</span></div>
-    <div id="set-selectors" class="set-selectors" role="group" aria-label="Choose a set to edit">${setSelectors(item)}</div>
+    <div class="apply-row"><button data-action="apply-all">${icon('copy')} Apply selected set to all</button></div>
     <div class="exercise-actions"><button class="button outline" data-action="previous" ${draft.current === 0 ? 'disabled' : ''}>${icon('back')}Previous</button><button id="next-button" class="button primary" data-action="next" ${duplicate || busy ? 'disabled' : ''}>${draft.current === 7 ? 'Finish workout' : 'Save & Next'}${icon(draft.current === 7 ? 'check' : 'arrow')}</button></div>
+    <div class="sets-heading"><span class="eyebrow">SET SUMMARY</span></div>
+    <div id="set-selectors" class="set-selectors" role="group" aria-label="Choose a set to edit">${setSelectors(item)}</div>
     <div class="secondary-actions"><button data-action="finish-now" ${duplicate || busy ? 'disabled' : ''}>Finish and save workout</button></div>
     <p class="draft-note">${icon('check')}<span id="draft-save-state">Draft saved on device</span></p><p class="field-help wheel-help">Drag a wheel, scroll, or tap a nearby number. With a keyboard, use arrow keys.</p></section>`;
 }
