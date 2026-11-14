@@ -62,15 +62,9 @@ function render() {
   document.querySelectorAll('.bottom-nav button').forEach(b => b.getAttribute('data-view') === view ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current'));
   if (view === 'workout') renderWorkout(); else if (view === 'history') renderHistory(); else renderProgress();
 }
-function previousExercise(item) {
-  for (const w of activeRecords().filter(w => w.date < draft.date)) {
-    const exercise = w.exercises.find(e => e.exerciseId === item.exerciseId && e.variation === item.variation && e.repMode === item.repMode);
-    if (exercise) return { workout: w, exercise };
-  }
-  return null;
-}
 function renderWorkout() {
-  const item = draft.exercises[draft.current], previous = previousExercise(item), duplicate = matchingDate();
+  const item = draft.exercises[draft.current], duplicate = matchingDate();
+  const subtitle = [item.variation?.trim(), item.repMode === 'per-leg' ? repLabel(item.repMode) : ''].filter(Boolean).join(' · ');
   const set = item.sets[item.selectedSet];
   main.innerHTML = `<div class="view-heading workout-heading"><div><h1>${draft.editing ? 'Edit workout' : 'Your workout'}</h1></div><span class="tag">${draft.editing ? 'EDITING' : draft.date === localDate() ? 'TODAY' : 'TRAINING'}</span></div>
     <div class="date-row"><label class="date-control">${icon('calendar')}<span>${escape(formatDate(draft.date, { weekday: 'short' }))}</span><input id="workout-date" type="date" aria-label="Workout date" value="${draft.date}" min="1900-01-01" max="2200-12-31"></label></div>
@@ -79,10 +73,9 @@ function renderWorkout() {
     <section aria-labelledby="exercise-name">
     <div class="exercise-meta"><span class="eyebrow">EXERCISE ${String(draft.current + 1).padStart(2, '0')} / 08</span><span class="exercise-count">${draft.exercises.filter(e => e.status === 'completed').length} completed</span></div>
     
-    <div class="exercise-title"><div><h2 id="exercise-name">${draft.current === 6 ? 'Custom Workout' : escape(item.name)}</h2><p class="exercise-subtitle">${escape(item.variation || 'Equipment not specified')} · ${repLabel(item.repMode)}</p></div><button class="details-link" data-action="details">Details ${icon('info')}</button></div>
+    <div class="exercise-title"><div><h2 id="exercise-name">${draft.current === 6 ? 'Custom Workout' : escape(item.name)}</h2>${subtitle ? `<p class="exercise-subtitle">${escape(subtitle)}</p>` : ''}</div><button class="details-link" data-action="details">Details ${icon('info')}</button></div>
     ${draft.current === 6 ? `<div class="custom-choice"><label class="field-label" for="custom-exercise">Choose your exercise</label><select id="custom-exercise" required><option value="">Select an exercise</option>${Object.entries(CUSTOM_GROUPS).map(([group, names]) => `<optgroup label="${group}">${names.map(name => `<option value="${customId(name)}" ${item.exerciseId === customId(name) ? 'selected' : ''}>${escape(name)}</option>`).join('')}</optgroup>`).join('')}</select></div>` : ''}
-    <div class="previous-card">${icon('history')}<div><p class="previous-label">PREVIOUS PERFORMANCE</p><p>${previous ? `<strong>${previous.exercise.sets.map(s => `${number(s.reps)} × ${number(s.weight)} kg`).join(' / ')}</strong><br>${formatDate(previous.workout.date)}${previous.exercise.repMode === 'per-leg' ? ' · reps per leg' : ''}` : 'Your first record starts here.'}</p></div></div>
-    <div class="workout-quick-actions"><button data-action="copy-last" class="button outline">${icon('copy')}Copy previous</button><button data-action="skip" class="button outline">Skip exercise ${icon('arrow')}</button></div><div class="picker-card"><div class="picker-top"><span id="editing-set-label">Editing set ${item.selectedSet + 1} of ${item.count}</span><span class="picker-unit">SET · REPS · KG</span></div>
+    <div class="workout-quick-actions"><button data-action="copy-last" class="button outline">${icon('copy')}Copy previous</button><button data-action="skip" class="button outline">Skip exercise ${icon('arrow')}</button></div><div class="picker-card">
     <div class="wheel-labels" aria-hidden="true"><span>SETS</span><span>REPS</span><span>KG</span></div>
     <div class="wheels"><number-wheel kind="sets" label="Number of sets" value="${item.count}"></number-wheel><number-wheel kind="reps" label="Repetitions for set ${item.selectedSet + 1}" value="${set.reps}"></number-wheel><number-wheel kind="weight" label="Weight in kilograms for set ${item.selectedSet + 1}" value="${set.weight}"></number-wheel></div>
     <p class="picker-footnote">${icon('info')}<span>KG is the total external load. Combine both dumbbells. Use 0 for bodyweight.${item.repMode === 'per-leg' ? '<br>Reps are per leg. Each set includes both legs.' : ''}</span></p></div>
@@ -90,7 +83,7 @@ function renderWorkout() {
     <div class="exercise-actions"><button class="button outline" data-action="previous" ${draft.current === 0 ? 'disabled' : ''}>${icon('back')}Previous</button><button id="next-button" class="button primary" data-action="next" ${duplicate || busy ? 'disabled' : ''}>${draft.current === 7 ? 'Finish workout' : 'Save & Next'}${icon(draft.current === 7 ? 'check' : 'arrow')}</button></div>
     <div class="sets-heading"><span class="eyebrow">SET SUMMARY</span></div>
     <div id="set-selectors" class="set-selectors" role="group" aria-label="Choose a set to edit">${setSelectors(item)}</div>
-    <div class="secondary-actions"><button data-action="finish-now" ${duplicate || busy ? 'disabled' : ''}>Finish and save workout</button></div>
+    <div class="secondary-actions"><button class="button primary full finish-workout-button" data-action="finish-now" ${duplicate || busy ? 'disabled' : ''}>${icon('check')} Finish and save workout</button></div>
     <p class="draft-note">${icon('check')}<span id="draft-save-state">Draft saved on device</span></p><p class="field-help wheel-help">Drag a wheel, scroll, or tap a nearby number. With a keyboard, use arrow keys.</p></section>`;
 }
 function setSelectors(item) {
@@ -98,7 +91,6 @@ function setSelectors(item) {
 }
 function updateSetUI() {
   const item = draft.exercises[draft.current];
-  $('#editing-set-label').textContent = `Editing set ${item.selectedSet + 1} of ${item.count}`;
   $('#set-selectors').innerHTML = setSelectors(item);
   const reps = main.querySelector('number-wheel[kind=reps]'), kg = main.querySelector('number-wheel[kind=weight]');
   reps.value = item.sets[item.selectedSet].reps; kg.value = item.sets[item.selectedSet].weight;
