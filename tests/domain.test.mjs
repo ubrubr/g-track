@@ -55,6 +55,8 @@ test('range, name, date and duplicate exercise validation rejects malformed inpu
   const w=record(); assert.equal(validDate('2026-02-30'),false); assert.equal(validDate('2026-99-01'),false); assert.equal(validDate('2024-02-29'),true);
   for (const change of [{reps:0,weight:0},{reps:10,weight:300.5},{reps:10,weight:1.25},{reps:101,weight:0}]) { const bad=clone(w); bad.exercises[0].sets=[change]; assert.throws(()=>validateWorkout(bad)); }
   const bad=clone(w); bad.exercises.push(clone(bad.exercises[0])); assert.throws(()=>validateWorkout(bad),/twice/);
+  const mistyped=clone(w); mistyped.exercises[0].position='1'; assert.throws(()=>validateWorkout(mistyped),/position/);
+  const edit=draftFromWorkout(w); delete edit.baseRevision; assert.throws(()=>validateDraft(edit),/revision/);
 });
 test('month filters clamp month-end boundaries without skipping into the next month', () => {
   const w=record(); w.date='2026-02-28';

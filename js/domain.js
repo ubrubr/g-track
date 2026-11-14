@@ -44,6 +44,7 @@ export function resizeSets(exercise, count) {
   exercise.selectedSet = Math.min(exercise.selectedSet, count - 1);
 }
 export function validateExercise(exercise) {
+  if (!Number.isInteger(exercise.position) || exercise.position < 1 || exercise.position > 8) throw new Error('The exercise position is invalid.');
   const definition = ALL_EXERCISES.find(e => e.id === exercise.exerciseId);
   if (!definition || definition.name !== exercise.name) throw new Error('Choose an exercise before saving Custom Workout.');
   const expected = EXERCISES[exercise.position - 1];
@@ -77,6 +78,7 @@ export function draftFromWorkout(workout, { copy = false, date = workout.date, s
 export function validateDraft(value) {
   if (!value || !validDate(value.date) || !isUUID(value.id) || !Number.isInteger(value.current) || value.current < 0 || value.current > 7 || !Array.isArray(value.exercises) || value.exercises.length !== 8) throw new Error('The saved draft is invalid.');
   const draft = clone(value);
+  if (typeof draft.editing !== 'boolean' || (draft.editing && (!Number.isSafeInteger(draft.baseRevision) || draft.baseRevision < 0 || (draft.baseLocalVersion !== null && !isUUID(draft.baseLocalVersion))))) throw new Error('The saved edit draft has an invalid revision.');
   draft.exercises.forEach((e, index) => {
     if (e.position !== index + 1 || !['pending', 'completed', 'skipped'].includes(e.status) || !inRange(e.count, LIMITS.sets) || !Number.isInteger(e.selectedSet) || e.selectedSet < 0 || e.selectedSet >= e.count || !Array.isArray(e.sets) || e.sets.length < e.count || e.sets.length > 10) throw new Error('The saved draft has invalid sets.');
     // An unselected custom slot is valid only as an unfinished suggestion.
