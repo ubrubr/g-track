@@ -24,7 +24,7 @@ export class NumberWheel extends HTMLElement {
       if (event.button !== 0) return;
       this.focus({ preventScroll: true });
       this.setPointerCapture(event.pointerId);
-      this.drag = { y: event.clientY, value: this._value, moved: false };
+      this.drag = { y: event.clientY, value: this._value, moved: false, rowHeight: this.getBoundingClientRect().height / 5 };
       this.classList.add('dragging');
     });
     this.addEventListener('pointermove', event => {
@@ -32,17 +32,17 @@ export class NumberWheel extends HTMLElement {
       const diff = this.drag.y - event.clientY;
       if (Math.abs(diff) > 5) this.drag.moved = true;
       if (this.drag.moved) {
-        const rows = diff / 44, nearest = Math.round(rows);
+        const rows = diff / this.drag.rowHeight, nearest = Math.round(rows);
         this.choose(this.drag.value + nearest * this.range.step);
         const atEdge = this._value === this.range.min || this._value === this.range.max;
-        this.track.style.transform = atEdge ? '' : `translateY(${(nearest - rows) * 44}px)`;
+        this.track.style.transform = atEdge ? '' : `translateY(${(nearest - rows) * this.drag.rowHeight}px)`;
       }
     });
     const finish = event => {
       if (!this.drag) return;
       if (!this.drag.moved && event.type === 'pointerup') {
         const bounds = this.getBoundingClientRect();
-        const offset = Math.round((event.clientY - bounds.top - bounds.height / 2) / 44);
+        const offset = Math.round((event.clientY - bounds.top - bounds.height / 2) / (bounds.height / 5));
         this.choose(this._value + offset * this.range.step);
       }
       this.drag = null; this.track.style.transform = ''; this.classList.remove('dragging');

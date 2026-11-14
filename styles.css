@@ -9,4 +9,14 @@ dialog{color:var(--text);background:#202020;border:1px solid #414141;border-radi
 @media(min-width:700px){.app-header{padding-top:34px}main{padding-top:14px}.bottom-nav{border-left:1px solid #303030;border-right:1px solid #303030;border-radius:18px 18px 0 0}.view-heading{margin-bottom:30px}.workout-heading{margin-bottom:20px}.picker-card{margin-top:23px}.previous-card{margin-top:24px}.exercise-actions{margin-top:29px}}
 @media(max-width:359px){.app-header{padding-left:17px;padding-right:17px}.header-actions{gap:6px}.status-button{font-size:9px}.brand{font-size:25px;gap:7px}main{padding-left:17px;padding-right:17px}.exercise-title h2{font-size:26px}.set-selectors{gap:6px}.set-selector{padding:10px 8px}.set-values{font-size:11px}.set-values small{font-size:8px}.button{padding:12px 10px;font-size:12px}.stat{padding:12px 9px}.stat strong{font-size:19px}.period-picker button{font-size:9px}.picker-top{padding-left:13px;padding-right:13px}.picker-top .mint{font-size:9px}#modal-content{padding:20px}.settings-grid{grid-template-columns:1fr}.view-heading h1{font-size:27px}.date-control{font-size:12px}}
 @media(max-width:359px){.exercise-actions{width:calc(100% - 34px)}}
+@media(max-width:600px) and (max-height:940px){
+ .app-header{padding-top:calc(12px + env(safe-area-inset-top,0px));padding-bottom:12px}
+ .workout-heading{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;margin:0;padding:0}
+ .workout-view .date-row{margin-bottom:12px}.workout-view .exercise-meta{margin-bottom:8px}.workout-view .segments{margin-bottom:16px}
+ .workout-view .exercise-title h2{font-size:27px}.workout-view .exercise-subtitle{margin-top:5px}
+ .workout-view .previous-card{margin:12px 0;padding:9px 12px}
+ .workout-view .picker-top{padding:12px 14px 0}.workout-view .wheel-labels{padding-top:12px}
+ .workout-view number-wheel{height:200px}.workout-view .wheel-number{height:40px}.workout-view .wheel-band{top:80px;height:40px}.workout-view .wheel-number.distance-0{font-size:34px}
+ .workout-view .picker-footnote{display:none}.workout-view .sets-heading{margin:8px 0 6px}.workout-view .sets-heading button{min-height:44px}
+}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}html.reduce-motion *,html.reduce-motion *::before,html.reduce-motion *::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}
