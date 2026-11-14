@@ -20,3 +20,75 @@ dialog{color:var(--text);background:#202020;border:1px solid #414141;border-radi
  .workout-view .picker-footnote{display:none}.workout-view .sets-heading{margin:8px 0 6px}.workout-view .sets-heading button{min-height:44px}
 }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}html.reduce-motion *,html.reduce-motion *::before,html.reduce-motion *::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}
+
+
+/* G-Track compact, task-first interface */
+:root{--bg:#131516;--surface:#1d2021;--input:#292c2d;--mint:#30fed9;--text:#f1f2f2;--secondary:#b6bbbc;--muted:#8a9091;--line:#363b3c}
+.app-header{padding:calc(8px + env(safe-area-inset-top,0px)) 20px 4px;justify-content:flex-end;min-height:55px}
+.header-actions{margin-left:auto;gap:10px}
+.status-button{gap:8px;padding:4px 8px;color:var(--secondary)}
+.status-dot{background:#858c8d!important}
+.status-button[data-state=failed] .status-dot,.status-button[data-state=conflict] .status-dot{background:var(--danger)!important}
+.status-button[data-state=synced] .status-dot{background:var(--mint)!important}
+.workout-view{padding-top:0;padding-bottom:calc(108px + var(--safe-bottom))}
+.workout-heading{display:none}
+.workout-view .date-row{justify-content:center;margin:3px auto 19px;max-width:230px}
+.workout-view .date-control{flex:initial;justify-content:center;width:100%;min-height:44px;border-radius:12px;padding:9px 12px;background:var(--surface);font-size:14px;font-weight:500}
+.workout-view .date-control .icon{color:var(--secondary)}
+.workout-view .date-control input{inset:0;width:100%;height:100%;max-width:none;top:0}
+.workout-view .exercise-meta{margin-bottom:6px}
+.workout-view .exercise-meta .eyebrow{color:var(--muted);font-size:10px}
+.workout-view .exercise-title{align-items:center;margin-bottom:6px}
+.workout-view .exercise-title h2{font-size:clamp(24px,7vw,31px);letter-spacing:-.8px}
+.workout-view .exercise-subtitle{font-size:11px;color:var(--secondary)}
+.details-link{color:var(--secondary)}
+.workout-view .previous-card{margin:9px 0 10px;padding:10px 12px;background:var(--surface)}
+.workout-view .previous-card .previous-label{font-size:9px}
+.workout-quick-actions{display:flex;gap:8px;margin:10px 0}
+.workout-quick-actions .button{flex:1;min-height:42px;font-size:11px;color:var(--secondary);background:var(--surface);padding:8px;border-color:var(--line);border-radius:11px}
+.workout-quick-actions .icon{width:15px;height:15px}
+.workout-view .picker-card{margin:10px 0 0;border-radius:15px;background:var(--surface)}
+.workout-view .picker-top{padding:10px 13px 4px;font-size:11px}
+.picker-unit{color:var(--muted);letter-spacing:.8px;font-size:9px}
+.workout-view .wheel-labels{padding:5px 10px 0;font-size:10px;letter-spacing:1.2px}
+.workout-view .wheels{gap:8px;padding:5px 10px 10px}
+number-wheel,.workout-view number-wheel{height:52px;touch-action:pan-y;cursor:default;overflow:visible}
+.wheel-control{height:52px;display:flex;align-items:center;border:1px solid #414748;background:#25292a;border-radius:11px;overflow:hidden}
+.wheel-select{height:100%;min-height:0;min-width:0;flex:1;border:0;background:transparent;color:var(--text);padding:0 1px 0 5px;text-align:center;font-size:clamp(19px,6vw,27px);font-weight:500;font-variant-numeric:tabular-nums;appearance:none;-webkit-appearance:none;cursor:pointer}
+.wheel-type{width:25px;min-width:25px;height:100%;padding:0 2px;border:0;color:var(--muted);font-size:13px}
+.wheel-direct{height:100%;min-width:0;min-height:0;border:0;border-radius:0;background:transparent;color:var(--text);text-align:center;font-size:24px;padding:0 5px}
+.workout-view .wheel-band,.workout-view .wheel-track{display:none}
+.wheel-control:focus-within{box-shadow:inset 0 0 0 1px #a6b4b5}
+.apply-row{display:flex;justify-content:flex-end;margin-top:9px}
+.apply-row button{min-height:42px;padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:#292d2e;color:var(--secondary);font-size:11px;display:flex;gap:8px;align-items:center}
+.apply-row .icon{width:14px;height:14px}
+.workout-view .exercise-actions{position:static;transform:none;box-shadow:none;left:auto;bottom:auto;width:100%;max-width:none;margin:13px 0 8px;padding:0;background:none}
+.workout-view .exercise-actions .button{min-height:51px}
+.workout-view .sets-heading{margin:16px 0 7px}
+.workout-view .sets-heading .eyebrow{color:var(--secondary);font-size:10px}
+.workout-view .set-selectors{gap:7px}
+.workout-view .set-selector{background:var(--surface);min-height:58px;border-color:var(--line);padding:8px 10px;border-radius:10px}
+.workout-view .set-selector[aria-pressed=true]{border-color:#8e9b9d;background:#303536}
+.workout-view .set-selector[aria-pressed=true] .set-num{color:var(--text)}
+.workout-view .set-selector:active{transform:scale(.97)}
+.workout-view .secondary-actions{justify-content:center;margin:10px 0 0}
+.workout-view .secondary-actions button:last-child{color:var(--secondary)}
+.workout-view .wheel-help{display:none}
+.workout-view .draft-note{font-size:10px;color:var(--muted);margin:7px 0}
+.bottom-nav button[aria-current=page]{color:var(--text);background:#303536}
+.metric-tabs button[aria-pressed=true]{color:var(--text);border-color:#889596;background:#303536}
+.chart-value{color:var(--text)}
+.chart-details>.eyebrow{color:var(--secondary)}
+.volume-change{font-size:12px;color:var(--secondary);margin:-8px 0 16px;font-variant-numeric:tabular-nums}
+.session-comparison{border:1px solid var(--line);border-radius:14px;margin:14px 0;background:var(--surface);padding:14px}
+.session-comparison h2{font-size:15px;margin-bottom:9px}
+.session-comparison-row{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;border-top:1px solid var(--line);padding:10px 0;align-items:center;font-size:12px;font-variant-numeric:tabular-nums}
+.session-comparison-row time{color:var(--secondary)}
+.session-comparison-row>span:nth-child(2){text-align:right}
+.session-comparison-row .difference{min-width:54px;text-align:right;color:var(--secondary)}
+button,select,summary,.icon-button,.date-control{transition:background-color .16s ease,border-color .16s ease,opacity .16s ease,transform .14s ease,box-shadow .16s ease}
+button:active:not(:disabled){transform:scale(.96);filter:brightness(1.12)}
+button:focus-visible,select:focus-visible{outline:2px solid #b6c0c1;outline-offset:2px}
+.button.primary:active:not(:disabled){filter:brightness(.93)}
+button:disabled{transition:opacity .15s}
+@media(max-width:359px){.workout-quick-actions .button{font-size:10px;padding:7px 4px}.workout-view .wheels{gap:4px;padding-inline:7px}.wheel-type{width:20px;min-width:20px}.wheel-select{font-size:20px}.workout-view .set-selector{padding:7px 6px}}
