@@ -1,70 +1,77 @@
 import { LIMITS, number } from './domain.js';
 
-export class NumberWheel extends HTMLElement {
-  constructor() { super(); this._value = 0; this.drag = null; this.wheelDelta = 0; }
-  connectedCallback() {
-    this.kind = this.getAttribute('kind'); this.range = LIMITS[this.kind];
-    this._value = Number(this.getAttribute('value') ?? this.range.min);
-    this.setAttribute('role', 'spinbutton'); this.setAttribute('tabindex', '0');
-    this.setAttribute('aria-label', this.getAttribute('label') || this.kind);
-    this.setAttribute('aria-valuemin', this.range.min); this.setAttribute('aria-valuemax', this.range.max);
-    this.innerHTML = '<div class="wheel-band" aria-hidden="true"></div><div class="wheel-track" aria-hidden="true"></div>';
-    this.track = this.querySelector('.wheel-track');
-    this.addEventListener('keydown', event => {
-      const steps = { ArrowUp: 1, ArrowRight: 1, ArrowDown: -1, ArrowLeft: -1, PageUp: 10, PageDown: -10 };
-      if (event.key in steps) { event.preventDefault(); this.choose(this._value + steps[event.key] * this.range.step); }
-      if (event.key === 'Home' || event.key === 'End') { event.preventDefault(); this.choose(event.key === 'Home' ? this.range.min : this.range.max); }
-    });
-    this.addEventListener('wheel', event => {
-      event.preventDefault();
-      this.wheelDelta += event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? 200 : 1);
-      if (Math.abs(this.wheelDelta) >= 24) { this.choose(this._value + Math.sign(this.wheelDelta) * this.range.step); this.wheelDelta = 0; }
-    }, { passive: false });
-    this.addEventListener('pointerdown', event => {
-      if (event.button !== 0) return;
-      this.focus({ preventScroll: true });
-      this.setPointerCapture(event.pointerId);
-      this.drag = { y: event.clientY, value: this._value, moved: false, rowHeight: this.getBoundingClientRect().height / 5 };
-      this.classList.add('dragging');
-    });
-    this.addEventListener('pointermove', event => {
-      if (!this.drag) return;
-      const diff = this.drag.y - event.clientY;
-      if (Math.abs(diff) > 5) this.drag.moved = true;
-      if (this.drag.moved) {
-        const rows = diff / this.drag.rowHeight, nearest = Math.round(rows);
-        this.choose(this.drag.value + nearest * this.range.step);
-        const atEdge = this._value === this.range.min || this._value === this.range.max;
-        this.track.style.transform = atEdge ? '' : `translateY(${(nearest - rows) * this.drag.rowHeight}px)`;
+class NumberWheel extends HTMLElement {
+    constructor() { super(); this._value = 0; this.wheelDelta = 0; }
+    connectedCallback() {
+      if (this.select) return;
+      this.kind = this.getAttribute('kind');
+      this.range = LIMITS[this.kind];
+      this._value = this.clamp(Number(this.getAttribute('value') ?? this.range.min));
+      const label = this.getAttribute('label') || this.kind;
+      const options = [];
+      for (let value = this.range.min; value <= this.range.max + this.range.step / 10; value += this.range.step) {
+        options.push(`<option value="${value}">${number(value)}</option>`);
       }
-    });
-    const finish = event => {
-      if (!this.drag) return;
-      if (!this.drag.moved && event.type === 'pointerup') {
-        const bounds = this.getBoundingClientRect();
-        const offset = Math.round((event.clientY - bounds.top - bounds.height / 2) / (bounds.height / 5));
-        this.choose(this._value + offset * this.range.step);
-      }
-      this.drag = null; this.track.style.transform = ''; this.classList.remove('dragging');
-    };
-    this.addEventListener('pointerup', finish); this.addEventListener('pointercancel', finish); this.addEventListener('lostpointercapture', finish);
-    this.render();
+      this.innerHTML = `<div class="wheel-control"><select class="wheel-select" aria-label="${label}">${options.join('')}</select><button class="wheel-type" type="button" aria-label="Type ${label.toLowerCase()} directly" title="Type a value">#</button><input class="wheel-direct" type="number" min="${this.range.min}" max="${this.range.max}" step="${this.range.step}" inputmode="decimal" aria-label="Type ${label.toLowerCase()}" hidden></div>`;
+      this.select = this.querySelector('.wheel-select');
+      this.typeButton = this.querySelector('.wheel-type');
+      this.direct = this.querySelector('.wheel-direct');
+      this.select.addEventListener('change', () => this.choose(Number(this.select.value)));
+      this.typeButton.addEventListener('click', () => {
+        this.select.hidden = true; this.typeButton.hidden = true; this.direct.hidden = false;
+        this.direct.value = this._value; this.direct.focus({ preventScroll: true }); this.direct.select();
+      });
+      const commit = () => {
+        if (this.direct.hidden) return;
+        const entered = this.direct.value.trim();
+        this.direct.hidden = true; this.select.hidden = false; this.typeButton.hidden = false;
+        if (entered !== '') this.choose(Number(entered)); else this.render();
+      };
+      this.direct.addEventListener('change', commit);
+      this.direct.addEventListener('blur', commit);
+      this.direct.addEventListener('keydown', event => {
+        if (event.key === 'Enter') { event.preventDefault(); commit(); this.select.focus({ preventScroll: true }); }
+        if (event.key === 'Escape') { event.preventDefault(); this.direct.value = this._value; commit(); this.select.focus({ preventScroll: true }); }
+      });
+      this.addEventListener('keydown', event => {
+        if (event.target === this.direct) return;
+        const keys = { PageUp: 10, PageDown: -10, Home: null, End: null };
+        if (event.key in keys) {
+          event.preventDefault();
+          this.choose(event.key === 'Home' ? this.range.min : event.key === 'End' ? this.range.max : this._value + keys[event.key] * this.range.step);
+        }
+      });
+      this.addEventListener('wheel', event => {
+        if (event.target === this.direct) return;
+        event.preventDefault();
+        this.wheelDelta += event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? 200 : 1);
+        const steps = Math.trunc(this.wheelDelta / 24);
+        if (steps) {
+          this.wheelDelta -= steps * 24;
+          this.choose(this._value + steps * this.range.step);
+        }
+      }, { passive: false });
+      this.render();
+    }
+    clamp(value) {
+      if (!Number.isFinite(value)) return this.range.min;
+      const steps = Math.round((value - this.range.min) / this.range.step);
+      return Math.min(this.range.max, Math.max(this.range.min, Number((this.range.min + steps * this.range.step).toFixed(2))));
+    }
+    get value() { return this._value; }
+    set value(value) { this._value = this.clamp(Number(value)); this.render(); }
+    choose(value) {
+      const next = this.clamp(value);
+      if (next === this._value) { this.render(); return; }
+      this._value = next;
+      this.render();
+      this.dispatchEvent(new CustomEvent('valuechange', { detail: next, bubbles: true }));
+    }
+    render() {
+      if (!this.select) return;
+      this.select.value = String(this._value);
+      this.direct.value = String(this._value);
+      this.select.setAttribute('aria-valuetext', number(this._value));
+    }
   }
-  get value() { return this._value; }
-  set value(value) { this._value = Math.max(this.range.min, Math.min(this.range.max, value)); this.render(); }
-  choose(value) {
-    const next = Math.max(this.range.min, Math.min(this.range.max, Math.round(value / this.range.step) * this.range.step));
-    if (this._value === next) return;
-    this._value = next; this.render(); this.dispatchEvent(new CustomEvent('valuechange', { detail: next, bubbles: true }));
-  }
-  render() {
-    if (!this.track) return;
-    this.setAttribute('aria-valuenow', this._value);
-    this.setAttribute('aria-valuetext', `${number(this._value)}${this.kind === 'weight' ? ' kilograms, total external load' : ` ${this.kind}`}`);
-    this.track.innerHTML = [-2, -1, 0, 1, 2].map(offset => {
-      const value = this._value + offset * this.range.step;
-      return `<span class="wheel-number distance-${Math.abs(offset)}">${value < this.range.min || value > this.range.max ? '' : number(value)}</span>`;
-    }).join('');
-  }
-}
-customElements.define('number-wheel', NumberWheel);
+  customElements.define('number-wheel', NumberWheel);

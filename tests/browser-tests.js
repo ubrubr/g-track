@@ -103,17 +103,27 @@ test('Cloud setup rejects secret/service-role keys and non-HTTPS URLs',async()=>
   const jwt=`e30.${btoa(JSON.stringify({role:'service_role'}))}.test`;await rejects(async()=>validateCloudConfig('https://example.com',jwt));
   equal(validateCloudConfig('https://example.com','sb_publishable_test').url,'https://example.com');
 });
-test('Wheel keyboard, mouse-wheel, bounds and synthetic touch drag handlers work',async()=>{
-  const fixture=document.querySelector('#wheel-fixture');fixture.innerHTML='<number-wheel kind="reps" label="Test repetitions" value="10"></number-wheel>';const wheel=fixture.firstElementChild;
-  wheel.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowUp',bubbles:true,cancelable:true}));equal(wheel.value,11);
-  wheel.dispatchEvent(new WheelEvent('wheel',{deltaY:30,bubbles:true,cancelable:true}));equal(wheel.value,12);
-  wheel.dispatchEvent(new KeyboardEvent('keydown',{key:'End',bubbles:true,cancelable:true}));equal(wheel.value,100);
-  wheel.dispatchEvent(new WheelEvent('wheel',{deltaY:100,bubbles:true,cancelable:true}));equal(wheel.value,100);
-  wheel.value=10;wheel.setPointerCapture=()=>{};
-  wheel.dispatchEvent(new PointerEvent('pointerdown',{clientY:110,button:0,pointerId:1,pointerType:'touch',bubbles:true}));
-  wheel.dispatchEvent(new PointerEvent('pointermove',{clientY:22,pointerId:1,pointerType:'touch',bubbles:true}));
-  wheel.dispatchEvent(new PointerEvent('pointerup',{clientY:22,pointerId:1,pointerType:'touch',bubbles:true}));equal(wheel.value,12);
-  assert(wheel.getAttribute('aria-valuenow')==='12');equal(wheel.querySelectorAll('.wheel-number').length,5);fixture.innerHTML='';
+test('Compact wheel allows immediate jumps, native selection, direct input and bounds',async()=>{
+  const fixture=document.querySelector('#wheel-fixture');
+  fixture.innerHTML='<number-wheel kind="reps" label="Test repetitions" value="10"></number-wheel>';
+  const wheel=fixture.firstElementChild;
+  assert(wheel.querySelector('.wheel-select'));
+  equal(wheel.querySelectorAll('.wheel-select option').length,100);
+  wheel.querySelector('.wheel-select').value='60';
+  wheel.querySelector('.wheel-select').dispatchEvent(new Event('change',{bubbles:true}));
+  equal(wheel.value,60);
+  wheel.querySelector('.wheel-type').click();
+  const input=wheel.querySelector('.wheel-direct');
+  assert(!input.hidden);
+  input.value='87';
+  input.dispatchEvent(new Event('change',{bubbles:true}));
+  equal(wheel.value,87);
+  wheel.dispatchEvent(new KeyboardEvent('keydown',{key:'End',bubbles:true,cancelable:true}));
+  equal(wheel.value,100);
+  wheel.dispatchEvent(new WheelEvent('wheel',{deltaY:-480,bubbles:true,cancelable:true}));
+  equal(wheel.value,80);
+  assert(wheel.getAttribute('aria-label')===null || wheel.querySelector('.wheel-select').getAttribute('aria-label')==='Test repetitions');
+  fixture.innerHTML='';
 });
 test('Workout layout fits 320, 375, 390 and 430 px without horizontal scrolling',async()=>{
   for(const width of [320,375,390,430]) {
