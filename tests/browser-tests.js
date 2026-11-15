@@ -127,15 +127,15 @@ test('Compact wheel allows immediate jumps, native selection, direct input and b
 });
 test('Workout layout fits 320, 375, 390 and 430 px without horizontal scrolling',async()=>{
   for(const width of [320,375,390,430]) {
-    const frame=document.createElement('iframe');frame.title=`Responsive check ${width}px`;frame.style.cssText=`position:absolute;left:-10000px;top:0;width:${width}px;height:844px;border:0`;frame.src='../?dev=1';
+    const frame=document.createElement('iframe');frame.title=`Responsive check ${width}px`;frame.style.cssText=`position:absolute;left:-10000px;top:0;width:${width}px;height:844px;border:0`;frame.src=`../?dev=1&db=gtrack-test-layout-${uuid()}`;
     const loaded=new Promise(resolve=>frame.onload=resolve);document.body.append(frame);
     try{
       await loaded;
-      for(let i=0;i<100&&!frame.contentDocument.querySelector('#exercise-name');i++)await new Promise(resolve=>setTimeout(resolve,30));
-      const doc=frame.contentDocument;assert(doc.querySelector('#exercise-name'),`App did not initialize at ${width}px`);
+      for(let i=0;i<100&&!frame.contentDocument.querySelector('[data-action="create-template"]');i++)await new Promise(resolve=>setTimeout(resolve,30));
+      const doc=frame.contentDocument;assert(doc.querySelector('[data-action="create-template"]'),`App did not initialize at ${width}px`);
       assert(doc.documentElement.scrollWidth<=width,`Horizontal overflow at ${width}px: ${doc.documentElement.scrollWidth}`);
-      equal(doc.querySelectorAll('#exercise-name').length,1);equal(doc.querySelectorAll('number-wheel').length,3);
-      for(const wheel of doc.querySelectorAll('number-wheel'))assert(wheel.getBoundingClientRect().width>50,`Wheel too narrow at ${width}px`);
+      equal(doc.querySelectorAll('number-wheel').length,0);equal(doc.querySelectorAll('.bottom-nav button').length,3);
+      assert(doc.querySelector('[data-action="create-template"]').getBoundingClientRect().height>=60);
     }finally{frame.remove();}
   }
 });

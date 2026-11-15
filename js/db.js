@@ -2,9 +2,10 @@ import { clone, uuid, validateWorkout, validateDraft, contentKey, DEFAULT_SETTIN
 
 const request = req => new Promise((resolve, reject) => { req.onsuccess = () => resolve(req.result); req.onerror = () => reject(req.error); });
 export async function openDatabase(name = 'form-fitness-v1') {
-  const req = indexedDB.open(name, 1);
-  req.onupgradeneeded = () => {
+  const req = indexedDB.open(name, 2);
+  req.onupgradeneeded = event => {
     const db = req.result;
+    if(event.oldVersion < 1) {
     const workouts = db.createObjectStore('workouts', { keyPath: 'key' });
     workouts.createIndex('owner', 'owner');
     workouts.createIndex('ownerDate', ['owner', 'date'], { unique: true });
@@ -13,6 +14,11 @@ export async function openDatabase(name = 'form-fitness-v1') {
     db.createObjectStore('drafts', { keyPath: 'owner' });
     db.createObjectStore('settings', { keyPath: 'owner' });
     db.createObjectStore('meta', { keyPath: 'key' });
+    }
+    if(event.oldVersion < 2) {
+      const templates=db.createObjectStore('templates',{keyPath:'key'});templates.createIndex('owner','owner');
+      db.createObjectStore('sessions',{keyPath:'owner'});
+    }
   };
   const db = await request(req);
   db.onversionchange = () => db.close();
@@ -57,7 +63,9 @@ export class Repository {
     return saved;
   }
   saveFinal(record, { editing = false, clearDraft = true, baseRevision, baseLocalVersion } = {}) {
-    return transaction(this.db, ['workouts', 'ops', 'drafts'], 'readwrite', async stores => {
+    return transaction(this.db, ['workouts', 'ops', 'drafts'], 'readwrite', stores => this.saveFinalRecord(stores,record,{editing,clearDraft,baseRevision,baseLocalVersion}));
+  }
+  async saveFinalRecord(stores,record,{editing=false,clearDraft=true,baseRevision,baseLocalVersion}={}) {
       record = clone(record);
       const sameDate = await request(stores.workouts.index('ownerDate').get([this.owner, record.date]));
       const original = await request(stores.workouts.get(this.key(record.id)));
@@ -67,7 +75,6 @@ export class Repository {
       const result = await this.queue(stores, record, original || sameDate);
       if (clearDraft) stores.drafts.delete(this.owner);
       return result;
-    });
   }
   deleteWorkout(id) {
     return transaction(this.db, ['workouts', 'ops', 'drafts'], 'readwrite', async stores => {

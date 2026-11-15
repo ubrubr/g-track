@@ -1,0 +1,2 @@
+import { preparePreview } from './preview-fixtures.js';
+document.querySelector('#preview-form').onsubmit=async event=>{event.preventDefault();const button=event.target.querySelector('button');button.disabled=true;try{const mode=document.querySelector('#preview-screen').value,name=`gtrack-qa-${mode}-${crypto.randomUUID()}`;const result=await preparePreview(name,mode);location.assign(result.url);}catch(error){document.querySelector('#preview-status').textContent=error.message;button.disabled=false;}};
