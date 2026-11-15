@@ -1,4 +1,4 @@
-name: Verify and deploy FORM
+name: Verify G-Track and publish reviewed main
 on:
   push:
     branches: [main]
@@ -17,19 +17,28 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+          cache: npm
+      - name: Install pinned verification dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Verify source and run tests
         run: |
           node scripts/check.mjs
           node --test tests/*.test.mjs
       - name: Build static offline app
         run: node scripts/build.mjs
+      - name: Upload review preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: g-track-preview
+          path: dist
+          retention-days: 14
       - name: Upload Pages artifact
-        if: github.event_name != 'pull_request'
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v4
         with:
           path: dist
   deploy:
-    if: github.event_name != 'pull_request'
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     needs: build
     runs-on: ubuntu-latest
     permissions:

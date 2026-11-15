@@ -31,10 +31,11 @@ export class Synchronizer {
       await this.repository.mergeRemote(await this.cloud.pull());
       const remaining = await this.repository.operations();
       const conflicts = remaining.filter(op => op.conflict).length;
-      this.onState({ state: conflicts ? 'conflict' : remaining.length ? 'pending' : 'synced', pending: remaining.length, conflicts });
+      this.onState({ state: this.cloud.upgradeNeeded?'upgrade':conflicts ? 'conflict' : remaining.length ? 'pending' : 'synced', pending: remaining.length, conflicts });
     } catch (error) {
       const remaining = await this.repository.operations();
-      this.onState({ state: error instanceof AuthError ? 'signin' : 'failed', pending: remaining.length, message: error.message });
+      if(error.name==='SchemaUpgradeRequired')try{await this.repository.mergeRemote(await this.cloud.pull());}catch(readError){this.onState({state:readError instanceof AuthError?'signin':'failed',pending:remaining.length,message:readError.message});return;}
+      this.onState({ state: error.name==='SchemaUpgradeRequired'?'upgrade':error instanceof AuthError ? 'signin' : 'failed', pending: remaining.length, message: error.message });
     }
   }
 }

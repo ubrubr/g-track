@@ -1,8 +1,10 @@
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../config.js';
 import { getMeta, setMeta } from './db.js';
 import { validateWorkout } from './domain.js';
+import { validateTemplate, validateSession, workoutDetails } from './model.js';
 
 export class AuthError extends Error {}
+export class SchemaUpgradeRequired extends Error { constructor(){super('G-Track 2 needs the reviewed database migration before cloud uploads. Your changes remain saved on this device.');this.name='SchemaUpgradeRequired';} }
 export function validateCloudConfig(url, key) {
   if (!url && !key) return { url: '', key: '' };
   let parsed;
@@ -97,10 +99,12 @@ export class Auth extends EventTarget {
   }
 }
 export function fromServer(row) {
-  return validateWorkout({ id: row.id, date: row.workout_date, exercises: row.exercises, deleted: row.deleted, revision: row.revision, updatedAt: row.updated_at, lastOperationId: row.last_operation_id });
+  const meta={id:row.id,deleted:row.deleted,revision:row.revision,updatedAt:row.updated_at,lastOperationId:row.last_operation_id};
+  if(row.kind)return (row.kind==='template'?validateTemplate:validateSession)({...row.data,...meta,entity:row.kind});
+  return validateWorkout({ ...(row.details||{}), ...meta, date:row.workout_date,exercises:row.exercises });
 }
 export class Cloud {
-  constructor(auth, owner) { this.auth = auth; this.owner = owner; }
+  constructor(auth, owner) { this.auth = auth; this.owner = owner; this.upgradeNeeded=false;this.schemaCheckedAt=0; }
   async request(path, options = {}, retry = true) {
     const token = await this.auth.accessToken(this.owner);
     const { url, key } = this.auth.config;
@@ -120,21 +124,34 @@ export class Cloud {
     }
     if (response.status === 403) throw new Error('Cloud access was denied. Check the database migration and owner access policies.');
     const data = await response.json().catch(() => null);
-    if (!response.ok) throw new Error(data?.message || `Cloud request failed (${response.status}). Your changes remain on this device.`);
+    if (!response.ok) { const error=new Error(data?.message || `Cloud request failed (${response.status}). Your changes remain on this device.`);error.status=response.status;error.code=data?.code;throw error; }
     return data;
   }
+  async ensureSchema(){
+    if(!this.upgradeNeeded&&this.schemaCheckedAt>Date.now()-60000)return;
+    try{const version=await this.request('rpc/gtrack_api_version',{method:'POST',body:'{}'});if(version!==2)throw new SchemaUpgradeRequired();this.upgradeNeeded=false;this.schemaCheckedAt=Date.now();}
+    catch(error){if(error instanceof SchemaUpgradeRequired||error.status===404||error.code==='PGRST202'){this.upgradeNeeded=true;throw new SchemaUpgradeRequired();}throw error;}
+  }
   async push(op) {
-    const data = await this.request('rpc/apply_workout', { method: 'POST', body: JSON.stringify({ p_operation_id: op.id, p_base_revision: op.baseRevision, p_workout: { id: op.record.id, date: op.record.date, exercises: op.record.exercises, deleted: op.record.deleted } }) });
+    // Preflight prevents a branch preview from writing v2 documents to production v1.
+    await this.ensureSchema();
+    const record=structuredClone(op.record);for(const key of ['key','owner','revision','updatedAt','lastOperationId','localVersion','sync'])delete record[key];
+    const route=op.entity?'rpc/apply_training_document':'rpc/apply_workout';
+    const body=op.entity?{p_operation_id:op.id,p_base_revision:op.baseRevision,p_document:{id:record.id,kind:op.entity,data:record,deleted:record.deleted}}:{p_operation_id:op.id,p_base_revision:op.baseRevision,p_workout:{id:record.id,date:record.date,exercises:record.exercises,deleted:record.deleted,details:workoutDetails(record)}};
+    const data = await this.request(route, { method: 'POST', body: JSON.stringify(body) });
     if (!data || !['ok', 'conflict'].includes(data.status)) throw new Error('Unexpected synchronization response.');
-    return { status: data.status, record: data.workout ? fromServer(data.workout) : null };
+    return { status: data.status, record: (data.workout||data.document) ? fromServer(data.workout||data.document) : null };
   }
   async pull() {
+    try{await this.ensureSchema();}catch(error){if(!(error instanceof SchemaUpgradeRequired))throw error;}
     const records = [];
     for (let offset = 0; ; offset += 500) {
-      const rows = await this.request(`workouts?select=id,workout_date,exercises,deleted,revision,updated_at,last_operation_id&order=id.asc&limit=500&offset=${offset}`);
+      const rows = await this.request(`workouts?select=id,workout_date,exercises,deleted,revision,updated_at,last_operation_id${this.upgradeNeeded?'':',details'}&order=id.asc&limit=500&offset=${offset}`);
       if (!Array.isArray(rows)) throw new Error('Unexpected cloud history response.');
       records.push(...rows.map(fromServer));
-      if (rows.length < 500) return records;
+      if (rows.length < 500) break;
     }
+    if(!this.upgradeNeeded)for(let offset=0;;offset+=500){const rows=await this.request(`training_documents?select=id,kind,data,deleted,revision,updated_at,last_operation_id&order=id.asc&limit=500&offset=${offset}`);if(!Array.isArray(rows))throw new Error('Unexpected training documents response.');records.push(...rows.map(fromServer));if(rows.length<500)break;}
+    return records;
   }
 }

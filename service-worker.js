@@ -1,7 +1,7 @@
 const VERSION = 'form-v1-dev'; // Replaced by the build script with a content hash.
 const PREFIX = `form:${new URL(self.registration.scope).pathname}:`;
 const CACHE = PREFIX + VERSION;
-const ASSETS = ['./', './index.html', './styles.css', './config.js', './manifest.webmanifest', './js/app.js', './js/domain.js', './js/db.js', './js/cloud.js', './js/sync.js', './js/wheel.js', './js/backup.js', './icons/favicon.svg', './icons/apple-touch-icon.png', './icons/icon-192.png', './icons/icon-512.png', './icons/maskable-512.png'];
+const ASSETS = ['./', './index.html', './styles.css', './config.js', './manifest.webmanifest', './js/app.js', './js/domain.js', './js/model.js', './js/analysis.js', './js/training-db.js', './js/ui.js', './js/views.js', './js/editors.js', './js/settings.js', './js/db.js', './js/cloud.js', './js/sync.js', './js/wheel.js', './js/backup.js', './icons/favicon.svg', './icons/apple-touch-icon.png', './icons/icon-192.png', './icons/icon-512.png', './icons/maskable-512.png'];
 const PATHS = new Set(ASSETS.map(path => new URL(path, self.registration.scope).pathname));
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS.map(path => new Request(new URL(path, self.registration.scope), { cache: 'reload' })))));

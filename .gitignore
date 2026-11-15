@@ -7,6 +7,11 @@ backups/
 *.backup.json
 form-backup-*.json
 form-sets-*.csv
+g-track-backup-*.json
+g-track-sets-*.csv
+.tools/
+supabase/.temp/
+supabase/.branches/
 test-results/
 *.log
 .DS_Store

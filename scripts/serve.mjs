@@ -19,5 +19,5 @@ const server = http.createServer(async (req,res) => {
     res.writeHead(200,{ 'Content-Type':types[path.extname(file)] || 'text/plain; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff' }); res.end(req.method === 'HEAD' ? undefined : body);
   } catch { res.writeHead(404); res.end('Not found'); }
 });
-server.listen(port,'127.0.0.1',() => console.log(`FORM local preview: http://127.0.0.1:${port}${base}`));
+server.listen(port,'127.0.0.1',() => console.log(`G-Track local preview: http://127.0.0.1:${port}${base}`));
 for (const signal of ['SIGINT','SIGTERM']) process.on(signal,() => server.close(() => process.exit(0)));

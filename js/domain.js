@@ -1,4 +1,5 @@
-export const SCHEMA_VERSION = 1;
+import { validateWorkoutV2, validateTrainingExercise, completedSets, workoutDetails } from './model.js';
+export const SCHEMA_VERSION = 2;
 export const LIMITS = Object.freeze({ sets: { min: 1, max: 10, step: 1 }, reps: { min: 1, max: 100, step: 1 }, weight: { min: 0, max: 300, step: 0.5 } });
 export const EXERCISES = Object.freeze([
   { id: 'squats', name: 'Squats' },
@@ -44,6 +45,7 @@ export function resizeSets(exercise, count) {
   exercise.selectedSet = Math.min(exercise.selectedSet, count - 1);
 }
 export function validateExercise(exercise) {
+  if (exercise?.version === 2) return validateTrainingExercise(exercise);
   if (!Number.isInteger(exercise.position) || exercise.position < 1 || exercise.position > 8) throw new Error('The exercise position is invalid.');
   const definition = ALL_EXERCISES.find(e => e.id === exercise.exerciseId);
   if (!definition || definition.name !== exercise.name) throw new Error('Choose an exercise before saving Custom Workout.');
@@ -89,6 +91,7 @@ export function validateDraft(value) {
 }
 export const isUUID = value => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 export function validateWorkout(value) {
+  if (value?.version === 2) return validateWorkoutV2(value);
   if (!value || !isUUID(value.id) || !validDate(value.date) || typeof value.deleted !== 'boolean' || !Array.isArray(value.exercises) || value.exercises.length > 8 || (!value.deleted && !value.exercises.length)) throw new Error('Invalid workout in backup or server response.');
   const positions = new Set();
   const exercises = value.exercises.map(e => {
@@ -100,11 +103,11 @@ export function validateWorkout(value) {
 }
 export function totals(exercises) {
   return exercises.reduce((result, e) => {
-    for (const s of e.sets) { const reps = s.reps * (e.repMode === 'per-leg' ? 2 : 1); result.reps += reps; result.volume += reps * s.weight; result.maxWeight = Math.max(result.maxWeight, s.weight); result.sets++; }
+    for (const s of completedSets(e)) { const reps = s.reps * (e.repMode === 'per-leg' ? 2 : 1); result.reps += reps; result.volume += reps * s.weight; result.maxWeight = Math.max(result.maxWeight, s.weight); result.sets++; }
     return result;
   }, { reps: 0, volume: 0, maxWeight: 0, sets: 0 });
 }
-export const contentKey = record => JSON.stringify({ date: record.date, deleted: record.deleted, exercises: record.exercises.map(validateExercise).sort((a, b) => a.position - b.position) });
+export const contentKey = record => JSON.stringify({ date: record.date, deleted: record.deleted, ...(record.version === 2 ? workoutDetails(record) : {}), exercises: record.exercises.map(validateExercise).sort((a, b) => a.position - b.position) });
 export function progressSeries(workouts, id, variation = '*', period = 'all', today = localDate()) {
   const cutoff = new Date(`${today}T12:00:00Z`);
   if (period === '4w') cutoff.setUTCDate(cutoff.getUTCDate() - 28);
@@ -123,5 +126,11 @@ export function progressSeries(workouts, id, variation = '*', period = 'all', to
 }
 export function validateSettings(value) {
   if (!value || !['total', 'per-leg'].includes(value.defaultRepMode) || typeof value.reducedMotion !== 'boolean') throw new Error('Invalid settings in backup.');
-  return { defaultRepMode: value.defaultRepMode, reducedMotion: value.reducedMotion };
+  const result = { defaultRepMode: value.defaultRepMode, reducedMotion: value.reducedMotion };
+  for (const field of ['restSound','haptics']) if (field in value) { if(typeof value[field]!=='boolean') throw new Error('Invalid notification preference.'); result[field]=value[field]; }
+  if ('customExercises' in value) {
+    if(!Array.isArray(value.customExercises)||value.customExercises.length>1000||value.customExercises.some(e=>!/^user:[0-9a-f-]{36}$/i.test(e.id)||typeof e.name!=='string'||!e.name.trim()||e.name.length>80))throw new Error('Invalid custom exercise library.');
+    result.customExercises=value.customExercises.map(e=>({id:e.id,name:e.name.trim()}));
+  }
+  return result;
 }

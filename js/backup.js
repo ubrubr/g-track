@@ -1,13 +1,16 @@
 import { SCHEMA_VERSION, validateWorkout, validateDraft, validateSettings, contentKey } from './domain.js';
+import { validateTemplate, validateSession, completedSets } from './model.js';
 
-export function createBackup(workouts, settings, draft = null) {
-  return { app: 'FORM', schemaVersion: SCHEMA_VERSION, exportedAt: new Date().toISOString(), settings: validateSettings(settings), workouts: workouts.map(validateWorkout), draft: draft ? validateDraft(draft) : null };
+export function createBackup(workouts, settings, draft = null, {templates=[],activeSession=null}={}) {
+  const active=activeSession?validateSession(activeSession):null;
+  if(active)for(const key of ['key','owner','sync','localVersion'])delete active[key];
+  return { app: 'G-Track', schemaVersion: SCHEMA_VERSION, exportedAt: new Date().toISOString(), settings: validateSettings(settings), workouts: workouts.map(validateWorkout), draft: draft ? validateDraft(draft) : null, templates:templates.map(validateTemplate),activeSession:active };
 }
 export function parseBackup(text) {
-  if (typeof text !== 'string' || text.length > 10 * 1024 * 1024) throw new Error('Choose a JSON backup smaller than 10 MB.');
+  if (typeof text !== 'string' || text.length > 25 * 1024 * 1024) throw new Error('Choose a JSON backup smaller than 25 MB.');
   let data;
   try { data = JSON.parse(text); } catch { throw new Error('This file is not valid JSON.'); }
-  if (data?.app !== 'FORM' || data.schemaVersion !== SCHEMA_VERSION || !Array.isArray(data.workouts) || data.workouts.length > 20000) throw new Error('This is not a supported FORM backup (schema version 1).');
+  if (!((data?.app==='FORM'&&data.schemaVersion===1)||(['FORM','G-Track'].includes(data?.app)&&data.schemaVersion===SCHEMA_VERSION)) || !Array.isArray(data.workouts) || data.workouts.length > 20000) throw new Error('This is not a supported G-Track backup (versions 1–2).');
   const ids = new Set(), dates = new Set();
   const workouts = data.workouts.map(value => {
     const workout = validateWorkout(value);
@@ -15,7 +18,8 @@ export function parseBackup(text) {
     ids.add(workout.id); dates.add(workout.date);
     return workout;
   });
-  return { workouts, settings: validateSettings(data.settings), draft: data.draft ? validateDraft(data.draft) : null };
+  const templates=(data.templates||[]).map(validateTemplate);if(new Set(templates.map(t=>t.id)).size!==templates.length)throw new Error('Duplicate template IDs in backup.');
+  return { workouts, settings: validateSettings(data.settings), draft: data.draft ? validateDraft(data.draft) : null,templates,activeSession:data.activeSession?validateSession(data.activeSession):null };
 }
 export function planImport(backup, existing) {
   return backup.workouts.map(incoming => {
@@ -31,10 +35,11 @@ const csvCell = value => {
   return `"${text.replaceAll('"', '""')}"`;
 };
 export function exportCSV(workouts) {
-  const rows = [['workout_id', 'date', 'exercise_id', 'exercise', 'position', 'equipment', 'notes', 'rep_convention', 'set', 'reps', 'weight_kg', 'total_reps', 'volume_kg']];
-  for (const w of workouts.filter(w => !w.deleted).sort((a, b) => a.date.localeCompare(b.date))) for (const e of w.exercises) e.sets.forEach((s, i) => {
+  const rows = [['workout_id', 'date', 'exercise_id', 'exercise', 'position', 'equipment', 'notes', 'rep_convention', 'set', 'reps', 'weight_kg', 'total_reps', 'volume_kg','workout_name','template_id','planned_reps','planned_weight_kg','duration_seconds','borg_rpe','workout_duration_seconds','completed_at']];
+  for (const w of workouts.filter(w => !w.deleted).sort((a, b) => a.date.localeCompare(b.date))) for (const e of w.exercises.filter(e=>!e.skipped)) e.sets.forEach((s, i) => {
+    if(s.completed===false||s.skipped)return;
     const reps = s.reps * (e.repMode === 'per-leg' ? 2 : 1);
-    rows.push([w.id, w.date, e.exerciseId, e.name, e.position, e.variation, e.notes, e.repMode, i + 1, s.reps, s.weight, reps, reps * s.weight]);
+    rows.push([w.id, w.date, e.exerciseId, e.name, e.position, e.variation, e.notes, e.repMode, i + 1, s.reps, s.weight, reps, reps * s.weight,w.name||'Workout',w.templateId||'',s.plannedReps??'',s.plannedWeight??'',s.durationSeconds??'',s.borgRpe??'',w.durationSeconds??'',s.completedAt||'']);
   });
   return '\uFEFF' + rows.map(row => row.map(csvCell).join(',')).join('\r\n');
 }
