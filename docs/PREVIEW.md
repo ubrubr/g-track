@@ -20,4 +20,4 @@ Primary working-app screenshots use 390 × 844; the offline evidence is a deskto
 
 Run `node scripts/serve.mjs --port 4173`, open `http://127.0.0.1:4173/tests/preview.html`, choose a screen and **Open isolated preview**. Each launch has its own database; fixtures never upload and are excluded from production.
 
-These show the implementation branch, not a completed hosted release. Earlier images under `previews/` belong to the superseded design.
+These are synthetic localhost captures of the final client. The production backend upgrade was verified on 16 November 2026; the client release is tracked in [PR #4](https://github.com/ubrubr/g-track/pull/4). Earlier images under `previews/` belong to the superseded design.

@@ -2,7 +2,7 @@
 
 A private fitness PWA built with HTML, CSS and JavaScript. The final design reuses the supplied icons with black, grey and cyan styling. Navigation is **Routines / Workouts / History / Profile**. There are no runtime packages, CDN assets, analytics or seeded production workouts.
 
-Repository: [ubrubr/g-track](https://github.com/ubrubr/g-track). Existing production URL: [ubrubr.github.io/g-track](https://ubrubr.github.io/g-track/). This branch is `codex/final-routines-design`; its database migrations have **not** been applied to production. [Release instructions](docs/UPGRADING.md).
+Repository: [ubrubr/g-track](https://github.com/ubrubr/g-track). Production URL: [ubrubr.github.io/g-track](https://ubrubr.github.io/g-track/). The final client release is tracked in [PR #4](https://github.com/ubrubr/g-track/pull/4). Both additive backend migrations were installed and verified on 16 November 2026; the configured project reports API version 3. [Release instructions](docs/UPGRADING.md).
 
 ## Run and review
 
@@ -73,4 +73,4 @@ Source browser runners: `/tests/browser.html` (20 regressions) and `/tests/train
 
 Migration chain: initial schema → `20261115171330_gtrack_v2_training.sql` → `20261116145425_automatic_routine_workouts.sql`. Do not rerun the initial schema on an existing installation. Inspect migration history, take private backups, apply only missing migrations, verify unchanged existing rows and API version 3, then deploy the reviewed client. [Detailed procedure and rollback](docs/UPGRADING.md).
 
-Hosted version 3 Auth/two-device acceptance remains pending because Supabase automatic approval review reported exhausted workspace credits. Physical iPhone Safari/installed-PWA acceptance also remains for actual safe areas, keyboard and lock-screen behavior. Timestamp recovery is tested; browsers cannot guarantee callback delivery while locked. See [checks actually executed](VERIFICATION.md).
+The production upgrade preserved existing workout, receipt, Auth-user and identity fingerprints. Hosted transactional RPC tests passed and were rolled back; anonymous REST access is denied and public signup remains disabled. Private owner sign-in/two-device UI acceptance and physical iPhone Safari/installed-PWA checks remain for actual safe areas, keyboard and lock-screen behavior. Timestamp recovery is tested; browsers cannot guarantee callback delivery while locked. See [checks actually executed](VERIFICATION.md).

@@ -1,6 +1,6 @@
 # Final workflow verification
 
-Executed 16 November 2026. Fixtures are synthetic and isolated. No owner credentials were entered and no v2/v3 production migration was applied. This supersedes the previous design's verification.
+Executed 16 November 2026. Local fixtures are synthetic and isolated. Both production migrations were subsequently applied after private backup and fingerprint capture. No owner credentials were entered. This supersedes the previous design's verification.
 
 ## Executed checks
 
@@ -38,8 +38,16 @@ The supplied `mobile UI.pdf` was rendered and inspected: approved active layout 
 
 The built `/g-track/` shell is loaded/cached, then its HTTP server is stopped. It reloads through the service worker, records a rated set, finishes directly and reloads persisted History with server still stopped. [Offline evidence](docs/final-previews/09-offline.jpg). This tests shell/storage, not offline hosted login.
 
+## Production backend verification
+
+The earlier automatic-review credit failure was resolved before retrying. A private app-data/schema export was saved under ignored `backups/`; it contains no Auth tokens or passwords. The established connector installed `gtrack_v2_training` at hosted version `20261116173257` and `automatic_routine_workouts` at `20261116174423`. API version is 3. All pre-existing workout contents/revisions/timestamps, receipt contents, Auth users and identities matched their pre-upgrade fingerprints. No original migration was rerun.
+
+Hosted PostgreSQL smoke tests exercised routine/profile/draft round trips, pending Borg 20, multiple drafts, same-date workouts, idempotent receipts, revision conflicts, cross-owner denial and restricted direct writes. The entire test transaction was rolled back; no synthetic records remain. All four public app tables have owner RLS. Public RPC wrappers are invokers, authenticated execution is allowed and anonymous execution is revoked. Real REST requests with only the publishable key received 401 for protected tables/RPCs. Auth settings confirm email login enabled and signup disabled.
+
+The security advisor's prior exposed-definer warning is resolved. The existing optional [leaked-password-protection warning](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection) remains; no unrelated Auth settings were changed. [Release procedure](docs/UPGRADING.md).
+
 ## Remaining acceptance
 
-Supabase automatic approval review rejected production SQL preflight because workspace credits were exhausted. No new production backup/fingerprint or v2/v3 migration completed. Restore credits, refresh schema inspection, take private backups, complete staging owner/two-device acceptance, apply reviewed migrations, verify preservation and deploy. [Release procedure](docs/UPGRADING.md).
+Private owner sign-in and two-device UI synchronization have not been exercised with owner credentials. Hosted role/RPC tests above do not claim to test password authentication or refresh through PostgREST.
 
 Physical iPhone Safari/installed-PWA acceptance remains for actual safe areas, virtual keyboard, lock-screen interruption and platform behavior. Timestamp recovery is tested; callback delivery while suspended is not guaranteed. Regular JSON backups cover browser storage eviction.

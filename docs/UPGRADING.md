@@ -1,12 +1,12 @@
 # Releasing the final routine workflow
 
-## State at handoff
+## Release state
 
-Branch `codex/final-routines-design` starts from `main` commit `d51b3e8` (earlier PR #3 was already merged). Pages remains `https://ubrubr.github.io/g-track/`. This final-design branch has not replaced production.
+The final client release is tracked in [PR #4](https://github.com/ubrubr/g-track/pull/4), based on `main` commit `d51b3e8`. The existing GitHub Actions workflow publishes reviewed main to `https://ubrubr.github.io/g-track/`.
 
-Hosted migration history last reported only initial `form_atomic_workouts` (`20261113201213`). Neither new migration was applied during this work. Supabase SQL preflight was rejected by **automatic approval review because workspace credits were exhausted**. It was not executed; this was not a determination that the SQL was unsafe. Do not bypass that check with another SQL client. Refill credits, then resume the established connector.
+On 16 November 2026 the automatic-review credit failure was resolved, the established connector was retried, and both additive migrations were installed. Hosted history is initial `form_atomic_workouts` (`20261113201213`), `gtrack_v2_training` (`20261116173257`) and `automatic_routine_workouts` (`20261116174423`). The hosted timestamps differ from source filenames because the connector records application time; match these migrations by name/content before any CLI push. API version is 3.
 
-No new production database backup or full row fingerprint was captured. Obtain them before changing the hosted schema. Local PostgreSQL tests are not a production backup or hosted acceptance.
+A private app-data/schema export and fingerprints were captured before migration under ignored `backups/`. Existing workouts, receipts, Auth users and identities matched after upgrade. Hosted RPC/owner tests passed inside a rolled-back transaction, leaving no synthetic records. Protected REST endpoints deny anonymous access, and signup remains disabled. [Verification details](../VERIFICATION.md).
 
 ## Preview and staging
 
@@ -27,9 +27,9 @@ Workouts, documents and receipts keep owner-read RLS. Direct app writes and anon
 
 ## Production sequence
 
-1. Resolve the automatic-review credit failure. Inspect current hosted migration history/schema again before acting.
+1. Inspect current hosted migration history/schema before acting. The migrations above are already installed on the configured production project.
 2. Export JSON from every device with possible unsynchronized work, retain old backups and obtain a private database snapshot/export. Record existing workout IDs, revisions, timestamps, counts and content fingerprints.
-3. Complete staging owner/two-device smoke tests. Close old production tabs/PWAs before cutover; earlier clients cannot display new records correctly.
+3. Run regression and transactional RPC/owner smoke tests; use a separate staging project where available for private owner/two-device acceptance. Close old production tabs/PWAs before cutover; earlier clients cannot display new records correctly.
 4. Apply only missing reviewed migrations in order. Original `202611130001_form.sql` corresponds to the installed initial schema with a different hosted history timestamp. **Do not rerun it**, reset the database or blindly push the directory. For the established CLI workflow, inspect `supabase migration list` and `supabase db push --dry-run` and resolve that mapping first. Both additive files are transactional.
 5. Verify authenticated `gtrack_api_version()` returns **3**, constraints/validators/owner privileges hold, and pre-existing workout values/revisions/timestamps match the baseline. Preserve Auth users and signup settings.
 6. Merge the final reviewed PR into `main`. Existing Actions checks/builds 41 assets and deploys only main; Pages source remains **GitHub Actions**.
