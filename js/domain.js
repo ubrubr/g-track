@@ -1,5 +1,5 @@
 import { validateWorkoutV2, validateTrainingExercise, completedSets, workoutDetails } from './model.js';
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 export const LIMITS = Object.freeze({ sets: { min: 1, max: 10, step: 1 }, reps: { min: 1, max: 100, step: 1 }, weight: { min: 0, max: 300, step: 0.5 } });
 export const EXERCISES = Object.freeze([
   { id: 'squats', name: 'Squats' },
@@ -91,7 +91,7 @@ export function validateDraft(value) {
 }
 export const isUUID = value => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 export function validateWorkout(value) {
-  if (value?.version === 2) return validateWorkoutV2(value);
+  if ([2,3].includes(value?.version)) return validateWorkoutV2(value);
   if (!value || !isUUID(value.id) || !validDate(value.date) || typeof value.deleted !== 'boolean' || !Array.isArray(value.exercises) || value.exercises.length > 8 || (!value.deleted && !value.exercises.length)) throw new Error('Invalid workout in backup or server response.');
   const positions = new Set();
   const exercises = value.exercises.map(e => {
@@ -107,7 +107,7 @@ export function totals(exercises) {
     return result;
   }, { reps: 0, volume: 0, maxWeight: 0, sets: 0 });
 }
-export const contentKey = record => JSON.stringify({ date: record.date, deleted: record.deleted, ...(record.version === 2 ? workoutDetails(record) : {}), exercises: record.exercises.map(validateExercise).sort((a, b) => a.position - b.position) });
+export const contentKey = record => JSON.stringify({ date: record.date, deleted: record.deleted, ...([2,3].includes(record.version) ? workoutDetails(record) : {}), exercises: record.version===3?validateWorkoutV2(record).exercises:record.exercises.map(validateExercise).sort((a, b) => a.position - b.position) });
 export function progressSeries(workouts, id, variation = '*', period = 'all', today = localDate()) {
   const cutoff = new Date(`${today}T12:00:00Z`);
   if (period === '4w') cutoff.setUTCDate(cutoff.getUTCDate() - 28);

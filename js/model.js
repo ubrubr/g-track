@@ -1,4 +1,5 @@
-// Version 2 training documents. Pure functions take an explicit clock for recovery tests.
+import { validateRoutine,validateAutomaticSession,validateAutomaticWorkout,validateExercise3 } from './schema3.js';
+// Legacy version 2 training documents remain readable and editable.
 export const TRAINING_VERSION = 2;
 export const TRAINING_LIMITS = Object.freeze({ exercises: 50, sets: 30, reps: 100, weight: 300, rest: 3600 });
 export const BORG_ANCHORS = Object.freeze([
@@ -39,6 +40,7 @@ function actualSet(value, active = false) {
   return result;
 }
 export function validateTrainingExercise(value, { planned = false, active = false } = {}) {
+  if(value?.version===3)return validateExercise3(value,{planned,active});
   if (!value || !uuidValid(value.id) || !finite(value.position,1,50) || typeof value.exerciseId !== 'string' || !/^[a-z0-9][a-z0-9:.-]{0,95}$/.test(value.exerciseId) || !['total','per-leg'].includes(value.repMode) || !finite(value.restSeconds,0,3600)) fail('Invalid exercise identity, order, repetition convention, or rest duration.');
   const common = { version: 2, id: value.id, position: value.position, exerciseId: value.exerciseId, name: text(value.name,80,true), variation: text(value.variation,120), notes: text(value.notes,2000), repMode: value.repMode, restSeconds: value.restSeconds };
   const sets = planned ? value.plan : value.sets;
@@ -66,10 +68,12 @@ function exercises(value, options) {
   return value.map((e,i)=>{ const checked=validateTrainingExercise(e,options); if(checked.position!==i+1) fail('Exercise order must be consecutive.'); return checked; });
 }
 export function validateTemplate(value) {
+  if(value?.version===3)return validateRoutine(value);
   if (!value || value.version !== 2 || !uuidValid(value.id) || typeof value.deleted !== 'boolean') fail('Invalid workout template.');
   return { version:2, entity:'template', id:value.id, name:text(value.name,80,true), exercises:exercises(value.exercises,{planned:true}), deleted:value.deleted, ...metadata(value) };
 }
 export function validateWorkoutV2(value) {
+  if(value?.version===3)return validateAutomaticWorkout(value);
   if (!value || value.version !== 2 || !uuidValid(value.id) || !calendarDate(value.date) || typeof value.deleted !== 'boolean' || (value.templateId !== null && !uuidValid(value.templateId))) fail('Invalid version 2 workout.');
   const result = { version:2, id:value.id, date:value.date, name:text(value.name,80,true), templateId:value.templateId, startedAt:timestamp(value.startedAt), endedAt:timestamp(value.endedAt), durationSeconds:value.durationSeconds, timingSource:value.timingSource || 'recorded', exercises:exercises(value.exercises,{}), deleted:value.deleted, ...metadata(value) };
   if ((result.durationSeconds !== null && !finite(result.durationSeconds,0,315360000)) || !['recorded','resumed','unknown'].includes(result.timingSource)) fail('Invalid workout duration.');
@@ -78,6 +82,7 @@ export function validateWorkoutV2(value) {
   return result;
 }
 export function validateSession(value) {
+  if(value?.version===3)return validateAutomaticSession(value);
   if (!value || value.version !== 2 || value.entity !== 'session' || !uuidValid(value.id) || !calendarDate(value.date) || typeof value.deleted !== 'boolean' || typeof value.editing !== 'boolean' || (value.templateId !== null && !uuidValid(value.templateId))) fail('Invalid active workout.');
   const result = { ...copy(value), name:text(value.name,80,true), exercises:exercises(value.exercises,{active:true}), startedAt:timestamp(value.startedAt), endedAt:timestamp(value.endedAt), ...metadata(value) };
   if (!finite(result.current,0,result.exercises.length-1) || !['recorded','resumed','unknown'].includes(result.timingSource) || (result.originalDurationSeconds !== null && !finite(result.originalDurationSeconds,0,315360000))) fail('Invalid saved session position or duration.');
@@ -183,7 +188,7 @@ export function finishSession(session,now=Date.now()) {
   const snapshot=copy(session);for(const e of snapshot.exercises)for(const s of e.sets){pauseTimer(s.timer,now);if(s.timer.touched)s.durationSeconds=Math.floor(timerElapsed(s.timer,now)/1000);}
   return validateWorkoutV2({version:2,id:snapshot.id,templateId:snapshot.templateId,name:snapshot.name,date:snapshot.date,startedAt:snapshot.startedAt,endedAt:snapshot.editing?snapshot.endedAt:iso(now),durationSeconds:sessionElapsed(snapshot,now),timingSource:snapshot.timingSource,exercises:snapshot.exercises,deleted:false,revision:snapshot.revision,updatedAt:iso(now)});
 }
-export function workoutDetails(workout) { return workout.version===2?{version:2,name:workout.name,templateId:workout.templateId,startedAt:workout.startedAt,endedAt:workout.endedAt,durationSeconds:workout.durationSeconds,timingSource:workout.timingSource}:{}; }
+export function workoutDetails(workout) { return [2,3].includes(workout.version)?{version:workout.version,name:workout.name,templateId:workout.templateId,startedAt:workout.startedAt,endedAt:workout.endedAt,durationSeconds:workout.durationSeconds,timingSource:workout.timingSource}:{}; }
 export function sessionFromWorkout(workout) {
   const v2=workout.version===2;
   return {version:2,entity:'session',id:workout.id,templateId:workout.templateId||null,name:workout.name||'Workout',date:workout.date,startedAt:workout.startedAt||null,endedAt:workout.endedAt||null,timingSource:workout.timingSource||'unknown',originalDurationSeconds:workout.durationSeconds??null,current:0,editing:true,deleted:false,revision:workout.revision||0,baseRevision:workout.revision||0,baseLocalVersion:workout.localVersion||null,rest:null,prompt:null,highlightSetId:null,

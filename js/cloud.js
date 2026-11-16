@@ -2,9 +2,10 @@ import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../config.js';
 import { getMeta, setMeta } from './db.js';
 import { validateWorkout } from './domain.js';
 import { validateTemplate, validateSession, workoutDetails } from './model.js';
+import { validateProfile } from './schema3.js';
 
 export class AuthError extends Error {}
-export class SchemaUpgradeRequired extends Error { constructor(){super('G-Track 2 needs the reviewed database migration before cloud uploads. Your changes remain saved on this device.');this.name='SchemaUpgradeRequired';} }
+export class SchemaUpgradeRequired extends Error { constructor(){super('Cloud synchronization is unavailable. Your changes are saved on this device.');this.name='SchemaUpgradeRequired';} }
 export function validateCloudConfig(url, key) {
   if (!url && !key) return { url: '', key: '' };
   let parsed;
@@ -100,11 +101,11 @@ export class Auth extends EventTarget {
 }
 export function fromServer(row) {
   const meta={id:row.id,deleted:row.deleted,revision:row.revision,updatedAt:row.updated_at,lastOperationId:row.last_operation_id};
-  if(row.kind)return (row.kind==='template'?validateTemplate:validateSession)({...row.data,...meta,entity:row.kind});
+  if(row.kind)return (row.kind==='profile'?validateProfile:row.kind==='template'?validateTemplate:validateSession)({...row.data,...meta,entity:row.kind});
   return validateWorkout({ ...(row.details||{}), ...meta, date:row.workout_date,exercises:row.exercises });
 }
 export class Cloud {
-  constructor(auth, owner) { this.auth = auth; this.owner = owner; this.upgradeNeeded=false;this.schemaCheckedAt=0; }
+  constructor(auth, owner) { this.auth = auth; this.owner = owner; this.upgradeNeeded=false;this.schemaCheckedAt=0;this.schemaVersion=1; }
   async request(path, options = {}, retry = true) {
     const token = await this.auth.accessToken(this.owner);
     const { url, key } = this.auth.config;
@@ -129,11 +130,11 @@ export class Cloud {
   }
   async ensureSchema(){
     if(!this.upgradeNeeded&&this.schemaCheckedAt>Date.now()-60000)return;
-    try{const version=await this.request('rpc/gtrack_api_version',{method:'POST',body:'{}'});if(version!==2)throw new SchemaUpgradeRequired();this.upgradeNeeded=false;this.schemaCheckedAt=Date.now();}
+    try{const version=await this.request('rpc/gtrack_api_version',{method:'POST',body:'{}'});this.schemaVersion=version;if(version!==3)throw new SchemaUpgradeRequired();this.upgradeNeeded=false;this.schemaCheckedAt=Date.now();}
     catch(error){if(error instanceof SchemaUpgradeRequired||error.status===404||error.code==='PGRST202'){this.upgradeNeeded=true;throw new SchemaUpgradeRequired();}throw error;}
   }
   async push(op) {
-    // Preflight prevents a branch preview from writing v2 documents to production v1.
+    // Never send new workflow data to an older schema that cannot preserve it.
     await this.ensureSchema();
     const record=structuredClone(op.record);for(const key of ['key','owner','revision','updatedAt','lastOperationId','localVersion','sync'])delete record[key];
     const route=op.entity?'rpc/apply_training_document':'rpc/apply_workout';
@@ -146,12 +147,12 @@ export class Cloud {
     try{await this.ensureSchema();}catch(error){if(!(error instanceof SchemaUpgradeRequired))throw error;}
     const records = [];
     for (let offset = 0; ; offset += 500) {
-      const rows = await this.request(`workouts?select=id,workout_date,exercises,deleted,revision,updated_at,last_operation_id${this.upgradeNeeded?'':',details'}&order=id.asc&limit=500&offset=${offset}`);
+      const rows = await this.request(`workouts?select=id,workout_date,exercises,deleted,revision,updated_at,last_operation_id${this.schemaVersion>=2?',details':''}&order=id.asc&limit=500&offset=${offset}`);
       if (!Array.isArray(rows)) throw new Error('Unexpected cloud history response.');
       records.push(...rows.map(fromServer));
       if (rows.length < 500) break;
     }
-    if(!this.upgradeNeeded)for(let offset=0;;offset+=500){const rows=await this.request(`training_documents?select=id,kind,data,deleted,revision,updated_at,last_operation_id&order=id.asc&limit=500&offset=${offset}`);if(!Array.isArray(rows))throw new Error('Unexpected training documents response.');records.push(...rows.map(fromServer));if(rows.length<500)break;}
+    if(this.schemaVersion>=2)for(let offset=0;;offset+=500){const rows=await this.request(`training_documents?select=id,kind,data,deleted,revision,updated_at,last_operation_id&order=id.asc&limit=500&offset=${offset}`);if(!Array.isArray(rows))throw new Error('Unexpected training documents response.');records.push(...rows.map(fromServer));if(rows.length<500)break;}
     return records;
   }
 }
