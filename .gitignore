@@ -13,5 +13,6 @@ g-track-sets-*.csv
 supabase/.temp/
 supabase/.branches/
 test-results/
+tmp/
 *.log
 .DS_Store

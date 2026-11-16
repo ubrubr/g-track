@@ -131,11 +131,11 @@ test('Workout layout fits 320, 375, 390 and 430 px without horizontal scrolling'
     const loaded=new Promise(resolve=>frame.onload=resolve);document.body.append(frame);
     try{
       await loaded;
-      for(let i=0;i<100&&!frame.contentDocument.querySelector('[data-action="create-template"]');i++)await new Promise(resolve=>setTimeout(resolve,30));
-      const doc=frame.contentDocument;assert(doc.querySelector('[data-action="create-template"]'),`App did not initialize at ${width}px`);
+      for(let i=0;i<100&&!frame.contentDocument.querySelector('[data-action="new-routine"]');i++)await new Promise(resolve=>setTimeout(resolve,30));
+      const doc=frame.contentDocument;assert(doc.querySelector('[data-action="new-routine"]'),`App did not initialize at ${width}px`);
       assert(doc.documentElement.scrollWidth<=width,`Horizontal overflow at ${width}px: ${doc.documentElement.scrollWidth}`);
-      equal(doc.querySelectorAll('number-wheel').length,0);equal(doc.querySelectorAll('.bottom-nav button').length,3);
-      assert(doc.querySelector('[data-action="create-template"]').getBoundingClientRect().height>=60);
+      equal(doc.querySelectorAll('number-wheel').length,0);equal(doc.querySelectorAll('#navigation button').length,4);
+      assert(doc.querySelector('[data-action="new-routine"]').getBoundingClientRect().height>=44);
     }finally{frame.remove();}
   }
 });

@@ -2,7 +2,7 @@ import { clone, uuid, validateWorkout, validateDraft, contentKey, DEFAULT_SETTIN
 
 const request = req => new Promise((resolve, reject) => { req.onsuccess = () => resolve(req.result); req.onerror = () => reject(req.error); });
 export async function openDatabase(name = 'form-fitness-v1') {
-  const req = indexedDB.open(name, 2);
+  const req = indexedDB.open(name, 3);
   req.onupgradeneeded = event => {
     const db = req.result;
     if(event.oldVersion < 1) {
@@ -18,6 +18,12 @@ export async function openDatabase(name = 'form-fitness-v1') {
     if(event.oldVersion < 2) {
       const templates=db.createObjectStore('templates',{keyPath:'key'});templates.createIndex('owner','owner');
       db.createObjectStore('sessions',{keyPath:'owner'});
+    }
+    if(event.oldVersion < 3) {
+      const workouts=req.transaction.objectStore('workouts');workouts.deleteIndex('ownerDate');workouts.createIndex('ownerDate',['owner','date']);
+      const drafts=db.createObjectStore('workoutDrafts',{keyPath:'key'});drafts.createIndex('owner','owner');
+      const profiles=db.createObjectStore('profiles',{keyPath:'key'});profiles.createIndex('owner','owner');
+      const cursor=req.transaction.objectStore('sessions').openCursor();cursor.onsuccess=()=>{const entry=cursor.result;if(entry){const v=entry.value;drafts.put({...v,key:`${v.owner}:session:${v.id}`});entry.continue();}};
     }
   };
   const db = await request(req);

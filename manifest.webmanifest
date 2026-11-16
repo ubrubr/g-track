@@ -1,11 +1,33 @@
 {
-  "id": "./", "name": "G-Track — Your training", "short_name": "G-Track",
+  "id": "./",
+  "name": "G-Track — Your training",
+  "short_name": "G-Track",
   "description": "Plan, train, and understand your progress. Private workout logging, online or offline.",
-  "lang": "en", "start_url": "./", "scope": "./", "display": "standalone",
-  "background_color": "#131516", "theme_color": "#131516", "orientation": "portrait-primary",
+  "lang": "en",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "orientation": "portrait-primary",
   "icons": [
-    { "src": "./icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "./icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "./icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "./icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ]
 }
